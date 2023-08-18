@@ -3,11 +3,12 @@ import datetime
 import time
 
 sensor = DistanceSensor(max_distance = 4, echo=17, trigger=18)
-Kp = 1
-Kd = 2
+Kp = 0.5
+Kd = 0.5
 goal = 5
+curr_error = 1e6
 prev_error = 0
-prev_time = 0
+prev_time = datetime.datetime.now().time()
 distance = sensor.distance * 100
 
 # def control(distance, prev_error, prev_time, goal = 5):
@@ -17,7 +18,7 @@ distance = sensor.distance * 100
 #     control_signal = Kp * curr_error + Kd * (derror/dt)
 #     return control_signal
 
-while distance < 5:
+while curr_error < 1:
     distance = sensor.distance * 100
     # print('Distance: ', distance)
     curr_error = distance - goal
