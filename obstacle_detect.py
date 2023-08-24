@@ -1,8 +1,6 @@
-def obstacle_detect(x,y,th,dist1,dist2,dist3,dist4,dist5):
+def obstacle_detect(x,y,th,dist1,dist2,dist3,dist4,dist5,obstacles):
     #sensor order: 1/2 front, 3 right, 4 back, 5 left
     ##check if wall/obstacle
-
-    obstacles = []
 
     if(dist1<0.1):
         x1 = x + dist1*np.cos(th)
