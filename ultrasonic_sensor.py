@@ -5,8 +5,8 @@ import time
 sensor = DistanceSensor(max_distance = 4, echo = 20, trigger = 21)
 driver1_pwm1 = PWMOutputDevice(pin = 18, initial_value = 0, frequency = 10000)
 driver1_pwm2 = PWMOutputDevice(pin = 23, initial_value = 0, frequency = 10000)
-driver2_pwm1 = PWMOutputDevice(pin = 17, initial_value = 0, frequency = 15000)
-driver2_pwm2 = PWMOutputDevice(pin = 27, initial_value = 0, frequency = 15000)
+driver2_pwm1 = PWMOutputDevice(pin = 17, initial_value = 0, frequency = 1000)
+driver2_pwm2 = PWMOutputDevice(pin = 27, initial_value = 0, frequency = 1000)
 
 # Kp = 0.1
 # Kd = -0.01
