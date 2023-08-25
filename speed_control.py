@@ -77,7 +77,7 @@ class MotorControl:
 
     def get_current_motor_speed(self): 
         return self.encoder.get_motor_speed()
-
+    
 
 pin_left_motor_PWM1 = 23
 pin_left_motor_PWM2 = 24
@@ -95,7 +95,6 @@ left_motor_control.set_motor_speed(0.4)
 left_motor_control.set_motor_speed(-0.2)
 left_motor_control.set_motor_speed(0)
 
-
 pin_right_motor_PWM1 = 4
 pin_right_motor_PWM2 = 17
 pin_right_motor_EN = 27
@@ -104,7 +103,6 @@ pin_right_motor_encoder_B = 6
 right_motor_speed_control_kp = 2
 right_motor_speed_control_ki = 1
 right_motor_control = MotorControl(pin_right_motor_PWM1, pin_right_motor_PWM2, pin_right_motor_EN, pin_right_motor_encoder_A, pin_right_motor_encoder_B, right_motor_speed_control_kp, right_motor_speed_control_ki)
-
 
 right_motor_control.enable_motor()
 right_motor_control.set_motor_speed(0.3)
