@@ -1,168 +1,59 @@
-#Import and classes
 import numpy as np
-from matplotlib import pyplot as plt
-from IPython import display
 
-def pwm_control(w_desired,w_measured,Kp,Ki,e_sum):
+class Planner:
     
-    duty_cycle = min(max(0,Kp*(w_desired-w_measured) + Ki*e_sum),1)
-    e_sum = e_sum + w_desired-w_measured
-    
-    return duty_cycle, e_sum
-
-def motor_simulator(w,duty_cycle):
-
-    I = 5
-    dt = 0.1
-    d = 1
-    
-    torque = I*duty_cycle
-
-    if (w > 0):
-        w = min(w + dt*(torque - d*w),3)
-    elif (w < 0):
-        w = max(w + dt*(torque - d*w),-3)
-    else:
-        w = w + dt*(torque)
-
-    return w
-
-class DiffDriveRobot:
-    
-    def __init__(self,inertia=5, dt=0.1, drag=0.2, wheel_radius=0.05, wheel_sep=0.15):
-        
-        self.x = 0.0 # y-position
-        self.y = -0.9 # y-position 
-        self.th = 90 # orientation
-        
-        self.wl = 0.0 #rotational velocity left wheel
-        self.wr = 0.0 #rotational velocity right wheel
-        
-        self.I = inertia
-        self.d = drag
-        self.dt = dt
-        
-        self.r = wheel_radius
-        self.l = wheel_sep
-    
-    # Should be replaced by motor encoder measurement which measures how fast wheel is turning
-    # Here, we simulate the real system and measurement
-    def motor_simulator(self,w,duty_cycle):
-        
-        torque = self.I*duty_cycle
-        
-        if (w > 0):
-            w = min(w + self.dt*(torque - self.d*w),3)
-        elif (w < 0):
-            w = max(w + self.dt*(torque - self.d*w),-3)
-        else:
-            w = w + self.dt*(torque)
-        
-        return w
-    
-    # Veclocity motion model
-    def base_velocity(self,wl,wr):
-        
-        v = (wl*self.r + wr*self.r)/2.0
-        
-        w = (wl*self.r - wr*self.r)/self.l
-        
-        return v, w
-    
-    # Kinematic motion model
-    def pose_update(self,duty_cycle_l,duty_cycle_r):
-        
-        self.wl = self.motor_simulator(self.wl,duty_cycle_l)
-        self.wr = self.motor_simulator(self.wr,duty_cycle_r)
-        
-        v, w = self.base_velocity(self.wl,self.wr)
-        
-        self.x = self.x + self.dt*v*np.cos(self.th)
-        self.y = self.y + self.dt*v*np.sin(self.th)
-        self.th = self.th + w*self.dt
-        
-        return self.x, self.y, self.th
-        
-class RobotController:
-    
-    def __init__(self,Kp=0.1,Ki=0.01,wheel_radius=0.025, wheel_sep=0.16):
-        
-        self.Kp = Kp
-        self.Ki = Ki
-        self.r = wheel_radius
-        self.l = wheel_sep
-        self.e_sum_l = 0
-        self.e_sum_r = 0
-        
-    def p_control(self,w_desired,w_measured,e_sum):
-        
-        duty_cycle = min(max(-1,self.Kp*(w_desired-w_measured) + self.Ki*e_sum),1)
-        
-        e_sum = e_sum + (w_desired-w_measured)
-        
-        return duty_cycle, e_sum
-        
-        
-    def drive(self,v_desired,w_desired,wl,wr):
-        
-        wl_desired = (v_desired + self.l*w_desired/2)/self.r
-        wr_desired = (v_desired - self.l*w_desired/2)/self.r
-        
-        duty_cycle_l,self.e_sum_l = self.p_control(wl_desired,wl,self.e_sum_l)
-        duty_cycle_r,self.e_sum_r = self.p_control(wr_desired,wr,self.e_sum_r)
-        
-        return duty_cycle_l, duty_cycle_r
-        
-
-
-class TentaclePlanner:
-    
-    def __init__(self,obstacles,dt=0.1,steps=7,alpha=1,beta=0.1):
-        
-        self.dt = dt
-        self.steps = steps
-        # Tentacles are possible trajectories to follow
-        self.tentacles = [(0.0,0.5),(0.0,-0.5),(0.1,1.0),(0.1,-1.0),(0.1,0.5),(0.1,-0.5),(0.1,0.0),(0.05,0.0),(0.0,0.25),(0.0,-0.25)]
-        
-        self.alpha = alpha
-        self.beta = beta
-
+    def __init__(self,obstacles):
         self.obstacles = obstacles
     
-    # Play a trajectory and evaluate where you'd end up
-    def roll_out(self,v,w,goal_x,goal_y,goal_th,x,y,th):
-        
-        for j in range(self.steps):
-        
-            x = x + self.dt*v*np.cos(th)
-            y = y + self.dt*v*np.sin(th)
-            th = (th + w*self.dt)
-            if (self.check_collision(x,y)):
-                return np.inf
-        
-        e_th = goal_th-th
-        e_th = np.arctan2(np.sin(e_th),np.cos(e_th))
-        
-        return self.alpha*((goal_x-x)**2 + (goal_y-y)**2) + self.beta*(e_th**2)
+    def euc_distance(self,x1,y1,x2,y2):
+        dist = np.sqrt((x2-x1)**2 + (y2-y1)**2)
+        return dist
+    
+    # Find the direction that reduces distance to goal
+    # Check Distance represents how many metres ahead we evaluate
+    def find_direction(self,check_distance,goal_x,goal_y,x,y):
+        distances = np.array([])
 
+        #Was getting errors using the np.pi/4 angles, so added an 
+        #array of the correct trig values (probably a better way to do this...)
+        ang = np.array([0,np.pi/2, 2*np.pi/2, 3*np.pi/2]) #list of cardinal directions
+        directions = np.array([[1, 0], [0,1], [-1,0], [0,-1]])#cos,sin of each of those directions
+
+        #Check cardinal directions to see which path is clear of 
+        #obstacles and has the shortests distance to goal
+        for x_check,y_check in directions:
+            x_new = x + check_distance*x_check
+            y_new = y + check_distance*y_check
+
+            if (self.check_collision(x_new,y_new)):
+                distances = np.append(distances,np.inf)
+            else:
+                distances = np.append(distances,self.euc_distance(x_new,y_new,goal_x,goal_y))
+            
+        
+        #Return the desired direction (relative to the arena, not the robot)
+        best_idx = np.argmin(distances)
+
+        return ang[best_idx]
+    
     def check_collision(self,x,y):
         
-        min_obstacle_dist = np.min(np.sqrt((x-self.obstacles[:,0])**2+(y-self.obstacles[:,1])**2))
+        #Get the distance to each obstacle
+        for obstacle in self.obstacles:
+            obstacle_x, obstacle_y = obstacle
+            obstacle_distance = self.euc_distance(x,y,obstacle_x,obstacle_y)
 
-        
-        if (min_obstacle_dist < 0.15 and x in (-1.9,1.9) and y in (-1.9,1.9) ): ## stay away from obstacles and walls
-            return True
+            #If within 0.1m or going outside the arena (0,0 at bottom left), don't use that path.
+            if(obstacle_distance < 0.1 or x < 0 or y < 0):
+                print(f'Collision if {x},{y}')
+                return True
+
         return False
     
-    # Choose trajectory that will get you closest to the goal
-    def plan(self,goal_x,goal_y,goal_th,x,y,th):
-        
-        costs =[]
-        for v,w in self.tentacles:
-            costs.append(self.roll_out(v,w,goal_x,goal_y,goal_th,x,y,th))
-        
-        best_idx = np.argmin(costs)
-        
-        
-        return self.tentacles[best_idx]
-        
+obstacles = np.array([[0.5,0.2],[0.4,0.3]])
+x,y = [0.4,0.2]
+goal_x,goal_y = [0.4,0.4]
+planner = Planner(obstacles)
+direction = planner.find_direction(0.05,goal_x,goal_y,x,y)
+
+print(np.degrees(direction))
