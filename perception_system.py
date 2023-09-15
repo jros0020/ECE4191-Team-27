@@ -8,6 +8,7 @@ def control_motor_speed(motor_control_object, speed):
     motor_control_object.enable_motor()
     while True:
         motor_control_object.set_motor_speed(speed) 
+        print("hi")
 
 # Left motor and encoder
 pin_left_motor_PWM1 = 23
@@ -39,7 +40,13 @@ distance_sensor_obj_dict = {'front': front_dist_sensor, 'right': right_dist_sens
 dist_sensor_cls = DistanceSensorCluster(distance_sensor_obj_dict, GLOBAL_TRIGGER) 
 
 
-while True: 
-    p1 = Thread(target = control_motor_speed, args = (right_motor_control, -0.5,))
-    p2 = Thread(target = control_motor_speed, args = (left_motor_control, 0.5,))
+if __name__ == "__main__":
+    while True: 
+        p1 = Thread(target = control_motor_speed, args = (right_motor_control, -0.5,))
+        p2 = Thread(target = control_motor_speed, args = (left_motor_control, 0.5,))
 
+        p1.start()
+        p2.start()
+        
+        p1.join()
+        p2.join()

@@ -5,20 +5,33 @@ class PIController:
     def __init__(self, kp, ki):
         self.kp = kp
         self.ki = ki
-        self.integral = 0.0
+        self.integral = []
         self.prev_error = 0.0
+        self.prev_time = 0
+        self.correction_threshold = 0.15
+        self.control_effort = 0 
     
-    def update(self, setpoint, feedback):
+    def update(self, setpoint, feedback, time):
         error = setpoint - feedback
-        self.integral += error
-        control_effort = self.kp * error + self.ki * self.integral
-
-        if control_effort > 1:
-            return 1
-        elif control_effort < 0: 
-            return 0
         
-        return control_effort
+        if abs(error) > abs(self.correction_threshold):
+            if len(self.integral) > 100:
+                self.integral.pop(0)
+                
+            self.integral.append(error)
+            dt = time - self.prev_time
+            self.control_effort = self.kp * error + self.ki * sum(self.integral)*dt
+
+            self.prev_time = time
+        
+            if self.control_effort > 1:
+                return 1
+            elif self.control_effort < 0: 
+                return 0
+            
+            return self.control_effort
+        else: 
+            
 
 class Encoder: 
     pulses_per_wheel_rotation = 75*12 # 75 turns of encoder is 1 rotation of wheel, 12 pulses per encoder rotation
@@ -57,13 +70,14 @@ class MotorControl:
         self.motor_EN.off()
 
     def set_motor_speed(self, ref_motor_speed):
-        max_iter = 35
+        max_iter = 1
 
         for idx in range(max_iter):
             current_motor_speed = self.encoder.get_motor_speed()
 
             if ref_motor_speed > 0: 
-                self.motor_PWM1.value = self.pi_controller.update(ref_motor_speed, current_motor_speed)
+                
+                self.motor_PWM1.value = self.pi_controller.update(ref_motor_speed, current_motor_speed, time())
                 self.motor_PWM2.value = 0
             elif ref_motor_speed < 0: 
                 self.motor_PWM1.value = 0
@@ -85,27 +99,29 @@ pin_left_motor_EN = 12
 pin_left_motor_encoder_A = 18
 pin_left_motor_encoder_B = 25
 left_motor_speed_control_kp = 2
-left_motor_speed_control_ki = 1
+left_motor_speed_control_ki = 10
 left_motor_control = MotorControl(pin_left_motor_PWM1, pin_left_motor_PWM2, pin_left_motor_EN, pin_left_motor_encoder_A, pin_left_motor_encoder_B, left_motor_speed_control_kp, left_motor_speed_control_ki)
 
 left_motor_control.enable_motor()
-left_motor_control.set_motor_speed(0.3)
-left_motor_control.set_motor_speed(0.1)
-left_motor_control.set_motor_speed(0.4)
-left_motor_control.set_motor_speed(-0.2)
-left_motor_control.set_motor_speed(0)
 
-pin_right_motor_PWM1 = 4
-pin_right_motor_PWM2 = 17
-pin_right_motor_EN = 27
-pin_right_motor_encoder_A = 5
-pin_right_motor_encoder_B = 6
-right_motor_speed_control_kp = 2
-right_motor_speed_control_ki = 1
-right_motor_control = MotorControl(pin_right_motor_PWM1, pin_right_motor_PWM2, pin_right_motor_EN, pin_right_motor_encoder_A, pin_right_motor_encoder_B, right_motor_speed_control_kp, right_motor_speed_control_ki)
+while True:
+    left_motor_control.set_motor_speed(0.4)
+# left_motor_control.set_motor_speed(0.1)
+# left_motor_control.set_motor_speed(0.4)
+# left_motor_control.set_motor_speed(-0.2)
+# left_motor_control.set_motor_speed(0)
 
-right_motor_control.enable_motor()
-right_motor_control.set_motor_speed(0.3)
-right_motor_control.set_motor_speed(0.1)
-right_motor_control.set_motor_speed(0.4)
-right_motor_control.set_motor_speed(-0.2)
+# pin_right_motor_PWM1 = 4
+# pin_right_motor_PWM2 = 17
+# pin_right_motor_EN = 27
+# pin_right_motor_encoder_A = 5
+# pin_right_motor_encoder_B = 6
+# right_motor_speed_control_kp = 2
+# right_motor_speed_control_ki = 1
+# right_motor_control = MotorControl(pin_right_motor_PWM1, pin_right_motor_PWM2, pin_right_motor_EN, pin_right_motor_encoder_A, pin_right_motor_encoder_B, right_motor_speed_control_kp, right_motor_speed_control_ki)
+
+# right_motor_control.enable_motor()
+# right_motor_control.set_motor_speed(0.3)
+# right_motor_control.set_motor_speed(0.1)
+# right_motor_control.set_motor_speed(0.4)
+# right_motor_control.set_motor_speed(-0.2)
