@@ -1,53 +1,49 @@
 from gpiozero import DistanceSensor, PWMOutputDevice
 from datetime import datetime
 import time
+import matplotlib.pyplot as plt
+import numpy as np
 
-sensor = DistanceSensor(max_distance = 4, echo = 20, trigger = 21)
-driver1_pwm1 = PWMOutputDevice(pin = 18, initial_value = 0, frequency = 10000)
-driver1_pwm2 = PWMOutputDevice(pin = 23, initial_value = 0, frequency = 10000)
-driver2_pwm1 = PWMOutputDevice(pin = 17, initial_value = 0, frequency = 1000)
-driver2_pwm2 = PWMOutputDevice(pin = 27, initial_value = 0, frequency = 1000)
 
-# Kp = 0.1
-# Kd = -0.01
-# goal = 5
-# curr_error = 1e6
-# prev_error = 0
-# prev_time = time.time()
-# distance = sensor.distance * 100
 
-# def control_sat(control_signal):
-#     if control_signal > 1:
-#         control_signal = 1
-#         return control_signal
-#     elif control_signal < 0:
-#         control_signal = 0
-#         return control_signal
-#     else: 
-#         control_signal = control_signal
-#         return control_signal
+
+
+# left_sensor = DistanceSensor(max_distance = 4, echo = 23, trigger = 18)
+left_center_sensor = DistanceSensor(max_distance = 2, echo = 16, trigger = 24)
+# right_center_sensor = DistanceSensor(max_distance = 4, echo = 14, trigger = 12)
+# right_sensor = DistanceSensor(max_distance = 4, echo = 15, trigger = 20)
+
+# while True:
+#     print(left_center_sensor.distance * 100)
     
-# while curr_error > 1:
-#     distance = sensor.distance * 100
-#     print('Distance: ', distance)
-#     curr_error = distance - goal
-#     derror = curr_error - prev_error
-#     # print(derror)
-#     dt = time.time() - prev_time
-#     # print(dt)
-#     prev_time = time.time()
-#     control_signal = Kp * curr_error + Kd * (derror/dt)
-#     control_signal = control_sat(control_signal)
-#     print('Control Signal: ', control_signal)
-#     driver1_pwm1.value = control_signal
-#     driver2_pwm1.value = control_signal
-#     prev_error = curr_error
-#     time.sleep(0.025)
 
-# driver1_pwm1.value = 0
-# driver2_pwm1.value = 0
-# print('You have arrived at your destination.')
-while True:
-    driver2_pwm1.value = 0
-    driver2_pwm2.value = 0.9
-    print("Running")
+sensor_readings = []
+sensor_readings_2 = []
+init_time = time.time()
+time_elapsed = 0
+weight = 0.8
+prev_dist = left_center_sensor.distance * 100 + 1
+while time_elapsed < 10:
+    # print(left_center_sensor.distance * 100)
+    # new_dist = (1-weight)*round(left_center_sensor.distance * 100 + 1, 10) + weight*prev_dist
+    # prev_dist = new_dist
+    sensor_readings.append(left_center_sensor.distance * 100 - 3.492261644918596)
+    print(left_center_sensor.distance * 100)
+    # sensor_readings_2.append(right_center_sensor.distance * 100)
+    time_elapsed = time.time() - init_time
+    # print(new_dist)
+    time.sleep(0.06)
+    # driver2_pwm1.value = 0
+    # driver2_pwm2.value = 0.9
+    # print("Running")
+
+offset = 20 - np.mean(sensor_readings)
+offset2 = 20 - np.mean(sensor_readings_2)
+
+print(offset)
+print(offset2)
+
+plot_time = range(0, len(sensor_readings))
+plt.plot(plot_time, sensor_readings)
+plt.axhline(y = 20)
+plt.savefig("ece4191/ECE4191-Team-27/pics/sensor_readings_variable_1.jpg")
